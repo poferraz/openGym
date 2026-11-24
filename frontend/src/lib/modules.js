@@ -18,7 +18,8 @@
 //     Body off on the phone and Seasonal off on the laptop keeps both.
 //
 // The core (logging, plans, history, the exercise library, the basic stats) is not a module.
-// Pure: no imports, so lib/ helpers such as history.js effortOf can use it without a cycle.
+// No runtime dependencies, so helpers such as history.js effortOf can use it without a cycle.
+import { PERSONAL } from './personal.js'
 
 /* `title` and `desc` are English keys, translated where they are shown. Order is the page's. */
 export const MODULES = [
@@ -72,8 +73,9 @@ const isMap = v => !!v && typeof v === 'object' && !Array.isArray(v)
 // Modules this build cannot have at all (lib/build-caps.js: the Coach, Integrations and Community
 // in openGym Offline, which has no network). Off whatever S.modules says, and not offered on the
 // Modules page; the choice itself is kept, so the same profile on a normal build is unchanged.
-let unavailable = new Set()
-export function setUnavailableModules(ids) { unavailable = new Set(Array.isArray(ids) ? ids : []) }
+const personalUnavailable = PERSONAL ? ['coach', 'integrations', 'community'] : []
+let unavailable = new Set(personalUnavailable)
+export function setUnavailableModules(ids) { unavailable = new Set([...personalUnavailable, ...(Array.isArray(ids) ? ids : [])]) }
 /** Whether this build has module `id` at all. */
 export const moduleBuilt = id => !unavailable.has(id)
 

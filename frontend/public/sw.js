@@ -268,6 +268,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url)
   if (e.request.method !== 'GET' || url.origin !== location.origin) return
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith(API)) return    // never cache auth/data
+  if (/\/source(?:\/|$)/.test(url.pathname)) return                             // serve current source offer
 
   if (isMediaPath(url.pathname)) {
     e.respondWith(media(e))

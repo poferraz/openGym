@@ -52,7 +52,7 @@ import { SeasonDeco } from './components/Seasonal.jsx'
 import { useNfcSupported, nfcExerciseSheet } from './components/Nfc.jsx'
 import { usesBands, withBandEx, setBandsOf, toggleSetBand, bandText } from './lib/bands.js'
 import { BandChips } from './components/Bands.jsx'
-import { Button, Slider, Switch, Segmented, SelectRow, Row, TextField, NumberField, MultiSelectRow } from './components/ui.jsx'
+import { Button, Check, Slider, Switch, Segmented, SelectRow, Row, TextField, NumberField, MultiSelectRow } from './components/ui.jsx'
 import { glyphOf, GLYPH_GROUPS, DEFAULT_GLYPH } from './lib/glyphs.js'
 import BodyMap from './components/BodyMap.jsx'
 import MuscleExplorer from './components/MuscleExplorer.jsx'
@@ -95,7 +95,7 @@ import { savedEntryRecords, repRecordTable, liveRecordsOn } from './lib/set-reco
 import { RecordBadge } from './components/SetRecord.jsx'
 import { sessionPrs, buildCompletedWorkout, sessionEnd } from './lib/finish-workout.js'
 import { reopenRecord, saveReopen, readReopen, canReopen, applyReopen } from './lib/forgotten-workout.js'
-import { refillAfter } from './lib/rotation.js'
+import { refillAfter, saveRotation, scheduleModeOf } from './lib/rotation.js'
 import { isWarmupRow, hasCompletedWork, isSideSet } from './lib/workout-model.js'
 import { ownExerciseRest } from './lib/supersetFlow.js'
 import { entryTimes } from './lib/exercise-time.js'
@@ -574,22 +574,27 @@ export const weighInsSheet = () => ui().openSheet(close => <WeighIns close={clos
 const effortLine = (effort, n, scale) => effort === 'none'
   ? tn('{0} set brings an {1} with it. Switch on Effort per set in Settings to see it.', '{0} sets bring an {1} with them. Switch on Effort per set in Settings to see it.', n, scale)
   : tn('{0} set brings an {1} with it.', '{0} sets bring an {1} with them.', n, scale)
+const canStartImportedRotation = st => scheduleModeOf(st) === 'rotation' && st.queue == null && !st.rotation?.sequence?.length
+
 // Shows what a parsed export would actually do before anything is written. An import is
 // the one action where "just try it" is expensive — it's someone's entire training
 // history — so the numbers, the unit conversion and the exercises we couldn't recognise
 // are all on screen before the confirm button.
 function ImportSummary({ parsed: initial, text, close }) {
   const st = useStore(s => s.S)
+  const oneGym = initial.source === 'One Gym'
+  const [sourceUnit, setSourceUnit] = useState(st.unit || 'kg')
+  const [useRotation, setUseRotation] = useState(false)
   // What you chose under "Check and choose" (#931, #849): the file is read again with it, so the
   // tiles and lines below show what Import will do. Nothing is written before Import.
   const [choices, setChoices] = useState(freshChoices)
   const parsed = useMemo(() => {
-    if (text == null || !choicesChanged(choices)) return initial
+    if (text == null || (!oneGym && !choicesChanged(choices))) return initial
     try {
-      const p = parseImportFile(text, choiceOpts(S(), choices))
+      const p = parseImportFile(text, { ...choiceOpts(S(), choices), oneGymSourceUnit: sourceUnit })
       return p && !p.error ? p : initial
     } catch { return initial }
-  }, [text, choices, initial])
+  }, [text, choices, initial, oneGym, sourceUnit, st.unit])
   const isBW = parsed.kind === 'bodyweight'
   // Our own body CSV brings measurement check-ins along (#718); a day that has one keeps it.
   const checkIns = isBW ? parsed.measurements || [] : []
@@ -607,10 +612,16 @@ function ImportSummary({ parsed: initial, text, close }) {
   const unmatched = [...new Set([...(isBW ? [] : parsed.unmatchedNames), ...(plans?.unmatchedNames || [])])].sort()
 
   const doImport = () => {
-    let res, planRes
+    let res = { added: 0 }, planRes
     update(s => {
-      res = mergeImport(s, parsed)
-      if (plans) planRes = mergeImportedRoutines(s, plans)
+      if (!oneGym) res = mergeImport(s, parsed)
+      if (plans) {
+        const start = s.routines?.length || 0
+        planRes = mergeImportedRoutines(s, plans)
+        if (oneGym && useRotation && planRes.added && canStartImportedRotation(s)) {
+          saveRotation(s, s.routines.slice(start).map(r => r.id), parsed.source)
+        }
+      }
       rememberPicks(s, choices.picks)
     })
     close()
@@ -626,7 +637,7 @@ function ImportSummary({ parsed: initial, text, close }) {
   return <>
     <h3>{parsed.source ? t('Import from {0}', parsed.source) : t('Import history')}</h3>
     <div className="muted small" style={{ marginBottom: 12 }}>
-      {hasWorkouts && fmtDateRange(parsed.from, parsed.to, true)}
+      {oneGym ? t('Each day becomes a routine. The CSV is read on this device.') : hasWorkouts && fmtDateRange(parsed.from, parsed.to, true)}
     </div>
 
     <div className="tiles" style={{ textAlign: 'start' }}>
@@ -646,6 +657,11 @@ function ImportSummary({ parsed: initial, text, close }) {
       </>}
     </div>
 
+    {oneGym && plans && <ul className="small" aria-label={t('Routines in file order')}>
+      {plans.routines.map(r => <li key={r.importKey}>{r.name} · {tn('{0} exercise', '{0} exercises', r.ex.length)}</li>)}
+    </ul>}
+    {oneGym && parsed.unlabelledWeights > 0 && <SelectRow icon="scale" title={t('Weight unit for numbers without a suffix')} value={sourceUnit}
+      options={[{ value: 'kg', label: 'kg' }, { value: 'lb', label: 'lb' }]} onChange={setSourceUnit} />}
     {parsed.mixedUnits ? <div className="small" style={{ color: 'var(--gold-ink)', marginBottom: 10 }}>
       {t('The file mixes kg and lb, so each set is converted to {0}.', st.unit)}
     </div> : parsed.converted ? <div className="small" style={{ color: 'var(--gold-ink)', marginBottom: 10 }}>
@@ -681,7 +697,12 @@ function ImportSummary({ parsed: initial, text, close }) {
         {unmatched.length > 12 && <span className="mchip">+{unmatched.length - 12}</span>}
       </div>
     </>}
-    {!isBW && <ImportChoicesFor parsed={parsed} plans={plans} bounds={initial} choices={choices} setChoices={setChoices} st={st} />}
+    {!isBW && <ImportChoicesFor parsed={parsed} plans={oneGym ? parsed.routines : plans} bounds={initial} choices={choices} setChoices={setChoices} st={st} />}
+
+    {oneGym && newPlans > 0 && canStartImportedRotation(st) && <div className="row" style={{ marginBottom: 12 }}>
+      <Check checked={useRotation} onChange={setUseRotation} label={t('Use these routines as my rotation')} />
+      <span className="small">{t('Use these routines as my rotation')}</span>
+    </div>}
 
     <Button variant="primary" onClick={doImport} disabled={!fresh}>
       {fresh ? t('Import') : t('Nothing new to import')}

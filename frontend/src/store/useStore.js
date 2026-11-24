@@ -6,6 +6,7 @@ import { t } from '../lib/i18n.js'
 import { registerCustom, healCustomEx } from '../lib/exercises.js'
 import { syncGymInventory } from '../lib/gym-inventory.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
+import { PERSONAL } from '../lib/personal.js'
 import { rememberDefaultLang } from '../lib/default-lang.js'
 import { guestAllowed } from '../lib/guest.js'
 import { stateJson } from '../lib/state-json.js'
@@ -354,6 +355,7 @@ export function freshState() {
   s.streakRuleAsk = true
   // The brand's green (1.4.5). DEF stays on the old green, so only a copy made here gets this.
   s.accent = NEW_ACCENT
+  if (PERSONAL) s.scheduleMode = 'rotation'
   return s
 }
 
@@ -2238,9 +2240,9 @@ export const useStore = create((set, get) => {
         finishBoot({ needsMobileOnboarding: !remote && !hasData(get().S) })
         return
       }
-      // Demo build (GitHub Pages): no backend at all — seed once, stay in guest mode.
+      // Static builds stay in guest mode. Only the public demo seeds sample workouts.
       if (DEMO) {
-        if (!localStorage.getItem(DEMO_SEEDED)) {
+        if (!PERSONAL && !localStorage.getItem(DEMO_SEEDED)) {
           localStorage.setItem(DEMO_SEEDED, '1')
           await get().resetDemo()
         }

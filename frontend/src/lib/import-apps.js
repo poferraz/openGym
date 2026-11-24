@@ -1,5 +1,5 @@
 // Workout history (and, where the export has them, routines) from the apps whose export is not
-// one CSV row per set: Liftosaur, Liftoff, StrongLifts 5×5, Fitbod and JEFIT (#862).
+// one CSV row per set: Liftosaur, Liftoff, StrongLifts 5×5, Fitbod, JEFIT and One Gym routines.
 //
 // Each reader turns its file into the rows lib/import-csv.js already understands
 // (parseWorkoutRows), so matching, units, warm-ups, timed and cardio sets, dedupe by day and the
@@ -12,7 +12,7 @@
 // device's clock, the way the app showed it; a date written as a day (StrongLifts, Fitbod, JEFIT's
 // log date) is kept as that day, never shifted through UTC.
 
-import { parseCSV, parseImport, parseWorkoutRows, matchExercise, isNoMatch, importId, priorCustom, bpFromName, roundWeight } from './import-csv.js'
+import { parseCSV, parseImport, parseWorkoutRows, matchExercise, isNoMatch, importId, priorCustom, bpFromName, bpFromCategory, roundWeight } from './import-csv.js'
 import { EXIDX, canonicalExId } from './exercises.js'
 import { uid } from './format.js'
 import { LIFTOSAUR_EXERCISES } from './liftosaur-exercises.js'
@@ -320,7 +320,7 @@ function routineResolver(source, customEx, toMatchName = () => '', matches) {
     const hit = canonicalExId(alt ? matchExercise(alt) || (isNoMatch(alt) ? null : matchExercise(n)) : matchExercise(n))
     return hit && EXIDX[hit] ? hit : null
   }
-  const resolve = name => {
+  const resolve = (name, metadata = null) => {
     const n = str(name)
     if (!n) return null
     const ownId = importId('im', source + '|' + n.toLowerCase())
@@ -330,7 +330,7 @@ function routineResolver(source, customEx, toMatchName = () => '', matches) {
     let id = pick === undefined ? a : pick === null ? (mine ? mine.id : null) : pick
     if (id && EXIDX[id] && !EXIDX[id].custom) matched.add(id)
     if (!id) {
-      if (!created.has(ownId)) created.set(ownId, { id: ownId, n: n.toLowerCase(), custom: true, eq: 'custom', tg: '', desc: '', bp: bpFromName(n.toLowerCase()) || 'upper legs', _name: n })
+      if (!created.has(ownId)) created.set(ownId, { id: ownId, n: n.toLowerCase(), custom: true, eq: 'custom', tg: '', desc: '', bp: bpFromName(n) || 'upper legs', ...metadata, _name: n })
       id = ownId
     }
     if (!names.has(nameKey(n))) names.set(nameKey(n), { key: nameKey(n), name: n, id, auto: a || ownId, sets: 0, workouts: 0 })
@@ -349,7 +349,7 @@ function routineResolver(source, customEx, toMatchName = () => '', matches) {
       ...extra,
     }
   }
-  return { resolve, finish }
+  return { resolve, finish, names }
 }
 
 function liftosaurRoutines(o, { unit = 'kg', customEx = [], matches } = {}) {
@@ -600,6 +600,76 @@ function parseJefit(text, opts) {
   return workouts(out, 'JEFIT', opts, skipped)
 }
 
+/* --------------------------------------------------------------- One Gym -- */
+
+const ONE_GYM = 'One Gym'
+const isOneGymCsv = head => ['day', 'exercise', 'sets'].every(h => head.includes(h)) && !head.includes('date')
+const ONE_GYM_BW = /^(bw|b\/w|body\s*weight)$/i
+const ONE_GYM_WEIGHT = /^(\d+(?:[.,]\d+)?|[.,]\d+)\s*(kg|lbs?)?$/i
+
+function oneGymTarget(text) {
+  const reps = /^(\d+)(?:\s*[-–—]\s*(\d+))?(?:\s+reps?)?$/i.exec(text)
+  if (reps) {
+    const low = Number(reps[1]), high = Number(reps[2] || low)
+    if (low >= 1 && high >= low && high <= 1000) return { mode: 'reps', reps: high, ...(low < high ? { repsMin: low } : {}) }
+  }
+  const time = /^(\d+(?:[.,]\d+)?)\s*(s(?:ec(?:ond)?s?)?|m(?:in(?:ute)?s?)?)$/i.exec(text)
+  const clock = /^(\d+):([0-5]\d)$/.exec(text)
+  const seconds = time ? Number(time[1].replace(',', '.')) * (/^m/i.test(time[2]) ? 60 : 1) : clock ? Number(clock[1]) * 60 + Number(clock[2]) : 0
+  if (seconds >= 1 && Number.isSafeInteger(Math.round(seconds))) return { mode: 'time', sec: Math.round(seconds) }
+  return null
+}
+
+function parseOneGymCsv(rows, { unit = KG, oneGymSourceUnit = unit, customEx = [], matches, skip, notes = true } = {}) {
+  const head = rows[0].map(norm)
+  const cols = new Map(head.map((name, index) => [name, index]))
+  if (['day', 'exercise', 'sets', 'reps time', 'weight'].some(key => head.indexOf(key) !== head.lastIndexOf(key))) {
+    return { error: 'format', app: ONE_GYM }
+  }
+  const R = routineResolver(ONE_GYM, customEx, undefined, matches)
+  const days = new Map(), weightUnits = new Set()
+  let skipped = 0, unlabelledWeights = 0, notesSeen = 0
+  for (const row of rows.slice(1)) {
+    const cell = name => str(row[cols.get(name)]).replace(/\r\n?/g, '\n')
+    const day = cell('day'), name = cell('exercise'), rawSets = cell('sets')
+    const sets = /^\d+$/.test(rawSets) ? Number(rawSets) : 0
+    const rawWeight = cell('weight'), bodyweight = ONE_GYM_BW.test(rawWeight)
+    const load = ONE_GYM_WEIGHT.exec(rawWeight)
+    const sourceUnit = load?.[2]?.toLowerCase().replace(/lbs$/, 'lb') || (oneGymSourceUnit === LB ? LB : KG)
+    const weight = load ? toUnit(Number(load[1].replace(',', '.')), sourceUnit, unit) : 0
+    if (row.length > head.length || !day || !name || sets < 1 || sets > 50 || (rawWeight && !bodyweight && !load) || !Number.isFinite(weight)) {
+      skipped++
+      continue
+    }
+    if (weight > 0) {
+      weightUnits.add(sourceUnit)
+      if (!load[2]) unlabelledWeights++
+    }
+    const rawTarget = cell('reps time'), target = oneGymTarget(rawTarget)
+    const guidance = [cell('notes'), cell('form guidance')].filter(Boolean)
+    if (guidance.length) notesSeen++
+    const note = [target || !rawTarget ? '' : rawTarget, ...(notes ? guidance : [])].filter(Boolean).join('\n').slice(0, NOTE_MAX)
+    const group = cell('muscle group'), muscle = cell('main muscle')
+    const bp = bpFromCategory(group) || bpFromCategory(muscle) || bpFromName(name) || 'upper legs'
+    const id = R.resolve(name, { bp, tg: muscle.slice(0, 80) })
+    const key = nameKey(name)
+    R.names.get(key).sets += sets
+    if (!days.has(day)) days.set(day, { rows: [], ex: [] })
+    const plan = days.get(day)
+    plan.rows.push(row)
+    if (skip?.has(key)) continue
+    plan.ex.push({ id, sets, weight, ...(bodyweight ? { bodyweight: true } : {}), ...(target || { mode: 'reps', reps: 10 }), ...(note ? { note } : {}) })
+  }
+  if (!days.size) return { error: 'format', app: ONE_GYM }
+
+  const routines = [...days].filter(([, plan]) => plan.ex.length).map(([name, plan]) => ({
+    importKey: importId('one-gym|', JSON.stringify(plan.rows)), name: name.slice(0, 80), emoji: 'figureStrength', ex: plan.ex,
+  }))
+  const plans = R.finish(ONE_GYM, routines, { names: [...R.names.values()] })
+  const fileUnit = weightUnits.size === 1 ? [...weightUnits][0] : ''
+  return { ...routinesOnly(plans), skipped, notesSeen, unlabelledWeights, fileUnit, mixedUnits: weightUnits.size > 1, converted: !!fileUnit && fileUnit !== unit }
+}
+
 /* ------------------------------------------------------------------ sniff -- */
 
 /**
@@ -615,11 +685,12 @@ export function parseImportFile(text, opts = {}) {
   if (/^\s*[[{]/.test(s)) return parseJson(s, opts)
   if (isJefit(s)) return parseJefit(s, opts)
   if (!/^\s*</.test(s) && !s.includes('HKQuantityTypeIdentifier')) {
-    const nl = s.search(/\r?\n/)
-    const head = parseCSV(nl < 0 ? s : s.slice(0, nl))[0]?.map(norm) || []
-    const app = isLiftosaurCsv(head) ? parseLiftosaurCsv : isStrongLifts(head) ? parseStrongLifts : isFitbod(head) ? parseFitbod : null
+    const csv = s.trimStart()
+    const nl = csv.search(/[\r\n]/)
+    const head = parseCSV(nl < 0 ? csv : csv.slice(0, nl))[0]?.map(norm) || []
+    const app = isLiftosaurCsv(head) ? parseLiftosaurCsv : isStrongLifts(head) ? parseStrongLifts : isFitbod(head) ? parseFitbod : isOneGymCsv(head) ? parseOneGymCsv : null
     if (app) {
-      const rows = parseCSV(s)
+      const rows = parseCSV(csv)
       if (rows.length < 2) return { error: 'empty' }
       return app(rows, opts)
     }

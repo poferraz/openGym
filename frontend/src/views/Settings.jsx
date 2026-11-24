@@ -52,6 +52,7 @@ import { t, tn, LANGS, INSTR_LANGS, EXERCISE_NAME_LANGS, baseLang, dateLocale } 
 import { nameIn, said } from '../lib/a11y-name.js'
 import { effectiveLang } from '../lib/default-lang.js'
 import { DEMO, REPO } from '../lib/demo.js'
+import { PERSONAL } from '../lib/personal.js'
 import { MOBILE, isAndroid, shareExport, shareExportBlob, syncReminder } from '../lib/mobile.js'
 import { NUDGE_COPY, NUDGE_TONES, toneOf } from '../lib/nudge.js'
 import { referencedFiles } from '../lib/media-refs.js'
@@ -1255,7 +1256,7 @@ export default function Settings({ page = null, find = null, via = null, entryKe
       <Section title={t('Bring data in')}>
         <Row icon="download" iconTint="var(--teal)" title={t('Import backup')} accessory="chevron" onClick={() => fileRef.current.click()} tour="data-import" />
         <Row icon="download" iconTint="var(--teal)" title={t('Import from another app')}
-          subtitle={t('Strong, Hevy, FitNotes, Liftosaur, Fitbod, StrongLifts, JEFIT and more, or body weight from Apple Health')}
+          subtitle={t('One Gym routine CSV, Strong, Hevy, FitNotes, Liftosaur and more')}
           accessory="chevron" onClick={() => importRef.current.click()} tour="data-apps" />
         {!offline && <Row icon="key" iconTint="var(--teal)" title={t('Import from Hevy')}
           subtitle={t('Pull your history with a Hevy Pro API key')}
@@ -1347,8 +1348,8 @@ export default function Settings({ page = null, find = null, via = null, entryKe
           build there is no address bar and no about box, so without this there is no way to tell
           which build you are running, or whether an update actually installed. */}
       <div className="dim small sp-version">
-        openGym v{__APP_VERSION__} · {t('free & open source (AGPL v3)')}<br />
-        <a href="https://github.com/DuarteSantos8/openGym" target="_blank" rel="noopener"><span>{t('Source code')}</span></a><br />
+        {PERSONAL ? 'openGym Personal' : 'openGym'} v{__APP_VERSION__} · {t('free & open source (AGPL v3)')}<br />
+        <a href={PERSONAL ? 'source/index.html' : 'https://github.com/DuarteSantos8/openGym'} target="_blank" rel="noopener"><span>{t('Source code')}</span></a><br />
         {/* Attribution the media licence asks for word for word (agreement §8c), so it is not translated.
             The spans keep each link's words above its neighbours' 44 px tap targets (index.css). */}
         Exercise media © Aliaksandr Makatserchyk, <a href="https://gymvisual.com/" target="_blank" rel="noopener"><span>Gym visual</span></a>, gymvisual.com.
@@ -1376,9 +1377,12 @@ export default function Settings({ page = null, find = null, via = null, entryKe
 
       {/* account (demo and mobile builds have nothing to sign in to) */}
       {/* A local-only phone has no account to hand another device a code for (#551). */}
-      {!(MOBILE && user) && <Section title={MOBILE ? t('Your data') : DEMO ? t('Demo') : t('Account')}
+      {!(MOBILE && user) && <Section title={MOBILE || PERSONAL ? t('Your data') : DEMO ? t('Demo') : t('Account')}
         footer={MOBILE ? (offline ? t('This is openGym Offline: Android doesn’t even let it on the internet. Want sync? The normal openGym app can do that, next to this one.') : t('Signing in on your computer too needs your own server. Connect this phone to it, and Add another device then gives the computer a code.')) : null}>
-        {MOBILE ? <>
+        {PERSONAL ? <>
+          <Row icon="lock" iconTint="var(--acc)" title={t('Guest mode: your data lives only in this browser.')} />
+          <Row icon="folder" iconTint="var(--blue)" title={t('Data & backup')} accessory="chevron" onClick={() => nav('/settings/data')} />
+        </> : MOBILE ? <>
           <Row icon="lock" iconTint="var(--acc)" title={t('All data stays on this phone')} subtitle={t('No account, no cloud. Back it up anytime in Data & backup.')} />
           {/* openGym Offline cannot reach a server at all (lib/build-caps.js). */}
           {!offline && <Row icon="cloud" iconTint="var(--indigo)" title={t('Connect to my server')} subtitle={t('Sync this device to your own self-hosted openGym instead.')} accessory="chevron"
@@ -1466,7 +1470,8 @@ function SettingsRoot({ ctx, preview, open, user, sync, home, go, entryKey }) {
   const set = v => { lastQuery = { q: v, key }; setQ(v) }
   const hits = q.trim() ? searchSettings(q, ctx) : null
   // The account card: who this is, and the one line that matters about it.
-  const acct = DEMO ? { title: t('Demo'), sub: t('Example data, only in this browser.') }
+  const acct = PERSONAL ? { title: t('Your data'), sub: t('Guest mode: your data lives only in this browser.') }
+    : DEMO ? { title: t('Demo'), sub: t('Example data, only in this browser.') }
     : user ? {
       title: user.name || t('Account'),
       sub: sync && sync.status && sync.status !== 'ok' ? t('Sync needs a look') : MOBILE ? t('Synced with your server') : t('Account, devices and sync'),

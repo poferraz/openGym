@@ -17,6 +17,7 @@ const apiOrigin = process.env.API_ORIGIN || 'http://localhost:8080'
 // Exercise media: served straight from catalogue/media in dev (see catalogueMedia below), or
 // proxied to a server of your choice with MEDIA_TARGET.
 const media = process.env.MEDIA_TARGET
+const personal = process.env.VITE_PERSONAL === '1'
 const catalogueMedia = {
   name: 'opengym-catalogue-media',
   configureServer(server) {
@@ -71,6 +72,14 @@ const swStamp = {
   generateBundle(_, bundle) { lazy = lazyAssets(bundle) },
   closeBundle() {
     const html = join(outDir, 'index.html'), sw = join(outDir, 'sw.js')
+    const manifest = join(outDir, 'manifest.json')
+    if (personal && existsSync(manifest)) {
+      const pwa = JSON.parse(readFileSync(manifest, 'utf8'))
+      pwa.name = 'openGym Personal'
+      pwa.short_name = 'openGym'
+      pwa.description = 'Plan and log your training on this device'
+      writeFileSync(manifest, JSON.stringify(pwa) + '\n')
+    }
     if (!existsSync(html) || !existsSync(sw)) return
     const stamp = createHash('sha256').update(readFileSync(html)).digest('hex').slice(0, 10)
     writeFileSync(sw, stampSw(readFileSync(sw, 'utf8'), { stamp, lazy }))
@@ -86,6 +95,9 @@ const swStamp = {
 const flavor = {
   name: 'opengym-flavor',
   transformIndexHtml(html) {
+    if (personal) return html.replace('<html lang="en">', '<html lang="en" data-personal>')
+      .replace('<title>openGym</title>', '<title>openGym Personal</title>')
+      .replace('name="apple-mobile-web-app-title" content="openGym"', 'name="apple-mobile-web-app-title" content="openGym Personal"')
     if (process.env.VITE_MOBILE !== '1') return
     return { html: mobileViewport(html), tags: [{ tag: 'meta', attrs: { name: 'opengym-flavor', content: 'mobile' }, injectTo: 'head' }] }
   }

@@ -149,6 +149,22 @@
    (4.6:1 on the page, 5.2:1 on a card). */
 :root[data-accent="brand"] { --acc:#a3e635; --acc-2:#84cc16; --on-acc:#0c0e12; --knob-ring:rgba(0,0,0,.28); --green:#a3e635; --on-green:#0c0e12 }
 :root[data-theme="light"][data-accent="brand"] { --acc:#84cc16; --acc-2:#65a30d; --green:#84cc16; --green-ink:#4a7a0e; --win-ink:#4a7a0e }
+:root[data-personal]:not([data-theme="light"]) {
+  --bg: #191c19;
+  --bg-el: #1f231f;
+  --surface: #242824;
+  --surface-2: #303730;
+  --surface-3: #3d463d;
+  --surface-raised: #303730;
+  --label: #f2f3e9;
+}
+:root[data-personal]:not([data-theme="light"])[data-accent="brand"] {
+  --acc: #deefb7;
+  --acc-2: #cee897;
+  --green: #deefb7;
+  --on-acc: #242824;
+  --on-green: #242824;
+}
 /* the other accents: Apple's system colours, so a recolour never looks off-system */
 :root[data-accent="lime"]  { --acc:var(--green);  --acc-2:#248a3d; --on-acc:#000 }
 :root[data-accent="sky"]   { --acc:var(--blue);   --acc-2:#0060df; --on-acc:#fff }

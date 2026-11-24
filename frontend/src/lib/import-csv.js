@@ -479,6 +479,7 @@ const CATEGORY_BP = Object.assign(Object.create(null), {
   'upper legs': 'upper legs', 'lower legs': 'lower legs', 'upper arms': 'upper arms',
   'lower arms': 'lower arms', waist: 'waist',
 })
+export const bpFromCategory = category => CATEGORY_BP[String(category || '').trim().toLowerCase()] || null
 
 /* ----------------------------------------------------------- conversion --- */
 
@@ -801,7 +802,7 @@ export function parseWorkoutRows(rows, map, source, { unit = 'kg', customEx = []
       if (!c) {
         c = {
           id: fileId || importId('im', source + '|' + name.toLowerCase()), n: own ? name : name.toLowerCase(), custom: true, eq: 'custom', tg: '', desc: '',
-          bp: CATEGORY_BP[cell(r, 'category').toLowerCase()] || (km ? 'cardio' : null)
+          bp: bpFromCategory(cell(r, 'category')) || (km ? 'cardio' : null)
             // Seconds with nothing else is a hold when the name says what it is (a plank is
             // core work); a name that says nothing keeps being read as cardio, as before.
             || (mins && !reps ? (secs > 0 ? bpFromName(name.toLowerCase()) : null) || 'cardio' : null)
