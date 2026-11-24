@@ -121,13 +121,15 @@ export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(appVersion), __SEASON_CLOCK__: JSON.stringify(process.env.VITE_SEASON_CLOCK === '1') },
   plugins: [react(), umami, flavor, swStamp, catalogueMedia],
   base: './',
+  // Personal routes use hashes. Unknown service paths should return 404 instead of the app shell.
+  appType: personal ? 'mpa' : 'spa',
   server: {
     // The Coach's core (payload, validator, prompts, HTTP adapters) lives in ../api/coach/core
     // and is imported by the phone build. vite build and vitest already reach it; the dev
     // server needs to be told the workspace is wider than frontend/.
     fs: { allow: ['..'] },
     proxy: {
-      '/api': { target: backend, changeOrigin: true, headers: { Origin: apiOrigin } },
+      ...(!personal ? { '/api': { target: backend, changeOrigin: true, headers: { Origin: apiOrigin } } } : {}),
       ...(media ? {
         '/exercise-media': { target: media, changeOrigin: true }
       } : {})

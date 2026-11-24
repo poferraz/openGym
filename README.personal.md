@@ -22,10 +22,16 @@ npm run build:personal --prefix frontend
 npm run preview --prefix frontend
 ```
 
-Use `vercel dev` from the configured frontend project for local testing of the generation endpoint. Vite Preview serves the static app only.
+From the repository root, run `vercel dev` to start the frontend, API gateway and private Coach together. Run `vercel dev --local` for local testing without linking a Vercel account. Vercel injects the binding at runtime. Vite Preview serves the static app only.
 
 ## Deploy from the fork on Vercel
 
-In the Vercel dashboard, import `poferraz/openGym` from GitHub and use `main` as the production branch. Set the root directory to `frontend` and enable **Include files outside the root directory in the Build Step**. The exercise catalog and shared code are in the parent repository. Choose Node.js 24.x and leave **Automatically expose System Environment Variables** enabled for the relay and the source revision link. `frontend/vercel.json` sets the Vite framework, build command, output directory, and relay duration. Keep the fork publicly readable so visitors can retrieve the matching AGPL source from Settings → About.
+In the Vercel dashboard, connect `poferraz/openGym` and use `main` as the production branch. Set the project Root Directory to the repository root (`.`) so Vercel reads the root `vercel.json`. Keep Fluid Compute enabled and use Node.js 24.x. Leave **Automatically expose System Environment Variables** enabled for the gateway's origin checks and the source revision link. Keep the fork publicly readable so visitors can retrieve the matching AGPL source from Settings → About.
 
-The web build uses the upstream workout logger, exercise library, rotation, progression, stats and JSON backups. Vercel runs the single `api/coach-plan.js` relay. It uses the key entered on the phone, so there is no shared Ollama credential to configure. Upstream attribution and exercise media terms are in [NOTICE.md](NOTICE.md).
+| Service | Access |
+| --- | --- |
+| `frontend` | Serves the Personal app and its assets. |
+| `api` | Receives browser requests at `/api/coach-plan`. It calls `coach` through the runtime `COACH_INTERNAL_URL` binding. |
+| `coach` | Private. Validates requests and forwards them to Ollama Cloud using the key entered in the app. |
+
+Vercel fills `COACH_INTERNAL_URL` automatically. The upstream account API and MCP adapter remain available through the self-hosted Docker setup. Upstream attribution and exercise media terms are in [NOTICE.md](NOTICE.md).
