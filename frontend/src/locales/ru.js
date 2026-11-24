@@ -1,5 +1,7 @@
 // Russian UI strings. Keys are the English source strings (see lib/i18n.js).
 export default {
+  "Training profile": "Тренировочный профиль",
+  "Strength workouts per week": "Силовых тренировок в неделю",
   // --- Settings first screen in groups (#1105) ---
   "Watches": "Часы",
   "Set once": "Настраивается один раз",

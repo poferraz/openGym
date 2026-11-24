@@ -1,5 +1,7 @@
 // Vietnamese UI strings. Generated for openGym.
 export default {
+  "Training profile": "Hồ sơ tập luyện",
+  "Strength workouts per week": "Số buổi tập sức mạnh mỗi tuần",
   // --- Settings first screen in groups (#1105) ---
   "Watches": "Đồng hồ",
   "Set once": "Đặt một lần",

@@ -2,6 +2,8 @@
 export const metadata = { description: 'Diario personale di allenamento e peso corporeo' }
 
 export default {
+  "Training profile": "Profilo di allenamento",
+  "Strength workouts per week": "Allenamenti di forza a settimana",
   // --- Settings first screen in groups (#1105) ---
   "Watches": "Orologi",
   "Set once": "Da impostare una volta",

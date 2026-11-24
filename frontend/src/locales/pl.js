@@ -1,5 +1,7 @@
 // Polish UI strings. Keys are the English source strings (see lib/i18n.js).
 export default {
+  "Training profile": "Profil treningowy",
+  "Strength workouts per week": "Treningi siłowe na tydzień",
   // --- Settings first screen in groups (#1105) ---
   "Watches": "Zegarki",
   "Set once": "Ustaw raz",

@@ -1,5 +1,7 @@
 // Korean UI strings. Keys are the English source strings (see lib/i18n.js).
 export default {
+  "Training profile": "운동 프로필",
+  "Strength workouts per week": "주당 근력 운동 횟수",
   // --- Settings first screen in groups (#1105) ---
   "Watches": "워치",
   "Set once": "한 번만 설정",

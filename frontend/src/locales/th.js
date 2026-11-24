@@ -1,5 +1,7 @@
 // Thai UI strings. Keys are the English source strings (see lib/i18n.js).
 export default {
+  "Training profile": "โปรไฟล์การฝึก",
+  "Strength workouts per week": "จำนวนครั้งที่ฝึกความแข็งแรงต่อสัปดาห์",
   // --- Settings first screen in groups (#1105) ---
   "Watches": "นาฬิกา",
   "Set once": "ตั้งครั้งเดียว",

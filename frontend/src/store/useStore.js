@@ -355,7 +355,10 @@ export function freshState() {
   s.streakRuleAsk = true
   // The brand's green (1.4.5). DEF stays on the old green, so only a copy made here gets this.
   s.accent = NEW_ACCENT
-  if (PERSONAL) s.scheduleMode = 'rotation'
+  if (PERSONAL) {
+    s.scheduleMode = 'rotation'
+    s.weekTarget = 2
+  }
   return s
 }
 

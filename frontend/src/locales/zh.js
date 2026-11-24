@@ -1,5 +1,7 @@
 // Simplified Chinese UI strings. Keys are the English source strings (see lib/i18n.js).
 export default {
+  "Training profile": "训练档案",
+  "Strength workouts per week": "每周力量训练次数",
   // --- Settings first screen in groups (#1105) ---
   "Watches": "手表",
   "Set once": "设置一次",

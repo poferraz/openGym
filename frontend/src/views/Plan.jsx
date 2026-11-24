@@ -36,6 +36,9 @@ import { groupRoutines, folderOpen, setFolderOpen, folderOf } from '../lib/routi
 import { isFavRoutine } from '../lib/routine-favs.js'
 import { routineFromWorkoutSheet } from '../components/RoutineFromWorkout.jsx'
 import { routineSources } from '../lib/session-routines.js'
+import { PERSONAL } from '../lib/personal.js'
+import { oneGymCSV } from '../lib/export-one-gym.js'
+import { saveCSV } from '../components/CsvExportSheet.jsx'
 
 // Plan has two views (v1.3.11): Schedule (how you train, and when) and Routines (what you
 // train). The last one you looked at comes back: a per-device convenience, never synced, so it
@@ -136,6 +139,16 @@ export function undoTakeOut({ id, at, label, snap, mark, marks }) {
 // The flash a row lands with when a swipe brought it (a duplicate, an undo): one per new value.
 let flashSeq = 0
 
+async function exportOneGymPlan() {
+  const instructions = await import('../instr/en.js').then(pack => pack.default).catch(() => ({}))
+  const state = useStore.getState().S
+  if (!planHasRoutines(state)) return
+  try {
+    await saveCSV(oneGymCSV(state, instructions), `one-gym-routine-${todayISO()}.csv`)
+    useUI.getState().toast(t('One Gym CSV exported'))
+  } catch { /* share sheet dismissed */ }
+}
+
 export default function Plan() {
   const nav = useNavigate()
   const S = useStore(s => s.S)
@@ -165,6 +178,7 @@ export default function Plan() {
       subtitle: has ? null : t('Add an exercise to a routine first. An empty plan has nothing to share.'),
       items: [
         { icon: 'share', label: t('Export plan file'), sub: t('A small file a friend can import into their own openGym. Routines only, none of your workouts or weigh-ins.'), disabled: !has, onClick: exportPlanFile },
+        PERSONAL && { icon: 'share', label: t('Export One Gym routine CSV'), disabled: !has, onClick: exportOneGymPlan },
         { icon: 'note', label: t('Print / Save as PDF'), disabled: !has, onClick: printWholePlan },
         { icon: 'download', label: t('Import a plan file'), onClick: () => fileRef.current?.click() },
         { icon: 'qr', label: t('Scan a QR code'), sub: t('A routine from a friend’s phone, the website or the poster by the squat rack.'), onClick: () => import('../components/ScanCode.jsx').then(m => m.scanQrCode()) },
@@ -186,6 +200,7 @@ export default function Plan() {
       <div><h1>{t('Plan')}</h1><div className="sub">{mode === 'rotation' ? t('Your routines in a loop') : t('Your weekly routine')}</div></div>
       <div className="hdr-actions">
         {showCoach && <Button size="sm" variant="tinted" icon="sparkles" onClick={() => nav('/coach')}>{t('Coach')}</Button>}
+        {PERSONAL && <Button size="sm" variant="tinted" icon="sparkles" onClick={() => nav('/settings/training-profile')}>{t('Draft with Ollama')}</Button>}
         <button className="iconbtn" data-tour="plan-menu" onClick={openMenu} aria-label={t('Plan options')} title={t('Plan options')}><Icon name="share" /></button>
       </div>
     </div>

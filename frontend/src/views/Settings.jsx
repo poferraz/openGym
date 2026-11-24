@@ -53,6 +53,7 @@ import { nameIn, said } from '../lib/a11y-name.js'
 import { effectiveLang } from '../lib/default-lang.js'
 import { DEMO, REPO } from '../lib/demo.js'
 import { PERSONAL } from '../lib/personal.js'
+import PersonalTraining from './PersonalTraining.jsx'
 import { MOBILE, isAndroid, shareExport, shareExportBlob, syncReminder } from '../lib/mobile.js'
 import { NUDGE_COPY, NUDGE_TONES, toneOf } from '../lib/nudge.js'
 import { referencedFiles } from '../lib/media-refs.js'
@@ -145,7 +146,7 @@ export function SettingsRoute() {
   const modules = useStore(s => s.S.modules), checkIn = useStore(s => s.S.checkIn)
   const trainers = useStore(s => !!s.config?.trainers?.on)
   const apiTokens = useStore(s => !!s.config?.api_tokens)
-  const ctx = { user: useStore(s => s.user), mobile: MOBILE, offline: offlineBuild(), demo: DEMO, trainers, apiTokens, ios: MOBILE && platformNow() !== 'android', android: MOBILE && platformNow() !== 'ios', mod: id => isOn({ modules, checkIn }, id) }
+  const ctx = { user: useStore(s => s.user), mobile: MOBILE, offline: offlineBuild(), demo: DEMO, personal: PERSONAL, trainers, apiTokens, ios: MOBILE && platformNow() !== 'android', android: MOBILE && platformNow() !== 'ios', mod: id => isOn({ modules, checkIn }, id) }
   if (page && (!PAGES[page] || !pageVisible(PAGES[page].parent || page, ctx) || !pageVisible(page, ctx))) return <Navigate to="/settings" replace />
   if (page === 'coach') return <Navigate to="/coach/setup" replace />
   return <Settings key={page || 'root'} page={page || null} find={loc.state?.find || null} via={loc.state?.via || null} entryKey={loc.key} />
@@ -474,7 +475,7 @@ export default function Settings({ page = null, find = null, via = null, entryKe
   const nfcOK = useNfcSupported()
   const canVibrate = vibrateSupported()
   const ctx = {
-    user, mobile: MOBILE, offline, android, ios: MOBILE && ios, appIcons: MOBILE && !!platformNow(), demo: DEMO, wakeOK, hasMedia, pwOn, webauthn: webauthnOK(),
+    user, mobile: MOBILE, offline, android, ios: MOBILE && ios, appIcons: MOBILE && !!platformNow(), demo: DEMO, personal: PERSONAL, wakeOK, hasMedia, pwOn, webauthn: webauthnOK(),
     sound: !!S.sound, playOnSilent: playOnSilentSupported(), canVibrate, vibrate: S.vibrate !== false,
     recordHints: recordHintsOn(S),
     profiles: (S.equipProfiles || []).length > 0, nameLang: EXERCISE_NAME_LANGS.includes(baseLang(lang)),
@@ -586,6 +587,7 @@ export default function Settings({ page = null, find = null, via = null, entryKe
 
   const pages = {
     modules: () => <ModulesPage />,
+    'training-profile': () => <PersonalTraining />,
     watches: () => <Section>{WATCH_PAGES.filter(id => pageVisible(id, ctx)).map(id => <Row key={id} icon={PAGES[id].icon} iconTint={PAGES[id].tint}
       title={t(PAGES[id].title)} accessory="chevron" onClick={() => open(id)} />)}</Section>,
     watch: () => <WatchSettingsPage />,
@@ -916,6 +918,8 @@ export default function Settings({ page = null, find = null, via = null, entryKe
     </>,
 
     plan: () => <>
+      {PERSONAL && <Section><Row icon="personCircle" iconTint="var(--acc)" title={t('Training profile')}
+        accessory="chevron" onClick={() => nav('/settings/training-profile')} /></Section>}
       <Section>
         {/* Fixed Week (S.week) or Rotation (the live queue, lib/queue.js + lib/rotation.js).
             Derived from the queue, never stored. */}
@@ -931,7 +935,7 @@ export default function Settings({ page = null, find = null, via = null, entryKe
           accessory="chevron" onClick={() => nav('/plan')} />}
         {/* A loop has no week of its own: this is the count Home's "2 of 4 left this week" uses
             for it (#753, lib/week-left.js). Off says nothing. */}
-        {mode === 'rotation' && !externalQ && <SelectRow icon="target" iconTint="var(--green)" title={t('Workouts per week')}
+        {mode === 'rotation' && !externalQ && <SelectRow icon="target" iconTint="var(--green)" title={PERSONAL ? t('Strength workouts per week') : t('Workouts per week')}
           value={weekTargetOf(S) || 0} onChange={v => update(s => { s.weekTarget = v || null })}
           options={[{ value: 0, label: t('Off'), subtitle: t('No weekly countdown on Home.') },
             ...[1, 2, 3, 4, 5, 6, 7].map(n => ({ value: n, label: String(n) }))]} />}

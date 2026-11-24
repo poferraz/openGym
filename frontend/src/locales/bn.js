@@ -1,5 +1,7 @@
 // Bengali UI strings. Keys are the English source strings (see lib/i18n.js).
 export default {
+  "Training profile": "ট্রেনিং প্রোফাইল",
+  "Strength workouts per week": "সপ্তাহে শক্তি বাড়ানোর ওয়ার্কআউট",
   // --- Settings first screen in groups (#1105) ---
   "Watches": "ঘড়ি",
   "Set once": "একবার সেট করুন",

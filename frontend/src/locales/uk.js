@@ -1,5 +1,7 @@
 // Ukrainian UI strings. Keys are the English source strings (see lib/i18n.js).
 export default {
+  "Training profile": "Тренувальний профіль",
+  "Strength workouts per week": "Силових тренувань на тиждень",
   // --- Settings first screen in groups (#1105) ---
   "Watches": "Годинники",
   "Set once": "Налаштовується один раз",

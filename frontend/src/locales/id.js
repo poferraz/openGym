@@ -1,5 +1,7 @@
 // Indonesian UI strings. Keys are the English source strings (see lib/i18n.js).
 export default {
+  "Training profile": "Profil latihan",
+  "Strength workouts per week": "Sesi latihan kekuatan per minggu",
   // --- Settings first screen in groups (#1105) ---
   "Watches": "Jam tangan",
   "Set once": "Atur sekali",

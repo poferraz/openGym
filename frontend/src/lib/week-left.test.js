@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { workoutsLeft, weekTargetOf } from './week-left.js'
 
 // 2026-10-28 is a Wednesday; the week (Monday start) runs 26 Oct to 1 Nov.
@@ -45,5 +45,37 @@ describe('workouts left this week (#753)', () => {
     expect(weekTargetOf({ weekTarget: 0 })).toBe(null)
     expect(weekTargetOf({ weekTarget: 9 })).toBe(null)
     expect(weekTargetOf({})).toBe(null)
+  })
+})
+
+describe('Personal strength goal', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  test('counts completed strength work through today, including imported workout history', async () => {
+    vi.resetModules()
+    vi.stubEnv('VITE_PERSONAL', '1')
+    const { workoutsLeft: personalWorkoutsLeft } = await import('./week-left.js')
+    const { parseImportFile } = await import('./import-apps.js')
+    const imported = parseImportFile('Date,Exercise,Weight,Reps\n2026-10-27,Barbell Bench Press,60,8').workouts
+    const strength = { id: '0025', sets: [{ w: 60, r: 8, done: true }] }
+    const timedStrength = { id: '0463', target: { mode: 'time' }, sets: [{ sec: 30, done: true }] }
+    const cardio = { id: '2311', sets: [{ min: 15, speed: 6, done: true }] }
+    const mobility = { id: '4477', sets: [{ sec: 30, done: true }] }
+    const warmup = { ...strength, sets: [{ w: 20, r: 8, done: true, warmup: true }] }
+    const unchecked = { ...strength, sets: [{ w: 60, r: 8, done: false }] }
+    const logged = (d, ...entries) => ({ ...wk(d), entries })
+    const S = base({
+      scheduleMode: 'rotation', weekTarget: 2, active: logged(TODAY, strength),
+      workouts: [
+        logged('2026-10-25', strength), logged('2026-10-26', cardio), logged(TODAY), logged(TODAY, mobility),
+        logged(TODAY, warmup, unchecked), logged('2026-10-29', strength), ...imported,
+      ],
+    })
+
+    expect(personalWorkoutsLeft(S, TODAY)).toEqual({ left: 1, of: 2, done: 1, kind: 'strength' })
+    S.workouts.push(logged(TODAY, cardio, timedStrength))
+    expect(personalWorkoutsLeft(S, TODAY)).toEqual({ left: 0, of: 2, done: 2, kind: 'strength' })
+    S.workouts.push(logged(TODAY, strength))
+    expect(personalWorkoutsLeft(S, TODAY)).toEqual({ left: 0, of: 2, done: 3, kind: 'strength' })
   })
 })

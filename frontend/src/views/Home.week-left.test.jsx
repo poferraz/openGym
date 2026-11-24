@@ -20,12 +20,12 @@ beforeEach(() => {
   document.body.appendChild(host)
   root = createRoot(host)
 })
-afterEach(() => { act(() => root.unmount()); host.remove() })
+afterEach(() => { act(() => root.unmount()); host.remove(); vi.useRealTimers(); vi.unstubAllEnvs() })
 
 const routines = [{ id: 'A', name: 'Push', ex: [] }, { id: 'B', name: 'Pull', ex: [] }]
-const mountWith = patch => {
-  useStore.setState(s => ({ S: { ...s.S, routines, workouts: [], bodyweight: [], dayPlan: {}, week: {}, active: null, queue: null, rotation: null, scheduleMode: null, weekStart: 1, ...patch }, user: null }))
-  act(() => root.render(<Home />))
+const mountWith = (patch, View = Home, store = useStore) => {
+  store.setState(s => ({ S: { ...s.S, routines, workouts: [], bodyweight: [], dayPlan: {}, week: {}, active: null, queue: null, rotation: null, scheduleMode: null, weekStart: 1, ...patch }, user: null }))
+  act(() => root.render(<View />))
 }
 const line = () => host.querySelector('.wkleft')?.textContent
 
@@ -41,6 +41,31 @@ describe('workouts left this week on Home (#753)', () => {
   it('says nothing without a plan', () => {
     mountWith({})
     expect(line()).toBeUndefined()
+  })
+  it('marks the Personal weekly goal met and leaves the next rotation routine available', async () => {
+    vi.resetModules()
+    vi.stubEnv('VITE_PERSONAL', '1')
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-28T12:00:00'))
+    const { default: PersonalHome } = await import('./Home.jsx')
+    const { useStore: personalStore } = await import('../store/useStore.js')
+    const ids = ['A', 'B', 'C']
+    const entries = [{ id: '0025', sets: [{ w: 60, r: 8, done: true }] }]
+    mountWith({
+      routines: [...routines, { id: 'C', name: 'Legs', ex: [] }],
+      workouts: [
+        { id: 'wA', d: '2026-10-26', name: 'Push', routineIds: ['A'], entries },
+        { id: 'wB', d: '2026-10-28', name: 'Pull', routineIds: ['B'], entries },
+      ],
+      weekTarget: 2,
+      rotation: { id: 'rot', sequence: ids, label: '' },
+      queue: { ids, startsOn: '2026-10-26', rotationId: 'rot' },
+    }, PersonalHome, personalStore)
+
+    expect(line()).toContain('2 of 2 strength workouts this week')
+    expect(line()).toContain('Extra workouts are optional')
+    expect(host.querySelector('.queue .chip.on').textContent).toContain('Legs')
+    expect(host.querySelector('.queue .chip.on').disabled).toBe(false)
   })
 })
 void isoOf

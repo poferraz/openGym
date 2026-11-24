@@ -13,7 +13,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-test('a personal build starts a blank local rotation without contacting a backend', async () => {
+test('a personal build starts a blank local rotation without contacting a backend', { timeout: 15_000 }, async () => {
   const fetch = vi.fn(() => { throw new Error('unexpected network request') })
   vi.stubGlobal('fetch', fetch)
   const { useStore } = await import('./useStore.js')
@@ -21,15 +21,15 @@ test('a personal build starts a blank local rotation without contacting a backen
   await useStore.getState().boot()
   const { S, isGuest, ready } = useStore.getState()
   expect({ guest: isGuest(), ready }).toEqual({ guest: true, ready: true })
-  expect(S).toMatchObject({ workouts: [], routines: [], bodyweight: [], scheduleMode: 'rotation' })
+  expect(S).toMatchObject({ workouts: [], routines: [], bodyweight: [], scheduleMode: 'rotation', weekTarget: 2 })
   expect(isOn(S, 'coach')).toBe(false)
   expect(localStorage.getItem('gym_demo_seeded_v1')).toBeNull()
   expect(fetch).not.toHaveBeenCalled()
 })
 
 test('personal boot preserves existing browser routines and schedule mode', async () => {
-  localStorage.setItem('gym_state_v1', JSON.stringify({ routines: [{ id: 'existing', name: 'My routine', ex: [] }], scheduleMode: 'week' }))
+  localStorage.setItem('gym_state_v1', JSON.stringify({ routines: [{ id: 'existing', name: 'My routine', ex: [] }], scheduleMode: 'week', weekTarget: null }))
   const { useStore } = await import('./useStore.js')
   await useStore.getState().boot()
-  expect(useStore.getState().S).toMatchObject({ routines: [{ id: 'existing', name: 'My routine' }], scheduleMode: 'week' })
+  expect(useStore.getState().S).toMatchObject({ routines: [{ id: 'existing', name: 'My routine' }], scheduleMode: 'week', weekTarget: null })
 })

@@ -1,4 +1,6 @@
 export default {
+  "Training profile": "訓練檔案",
+  "Strength workouts per week": "每週肌力訓練次數",
   // --- Settings first screen in groups (#1105) ---
   "Watches": "手錶",
   "Set once": "設定一次",

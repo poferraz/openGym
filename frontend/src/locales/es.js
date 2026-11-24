@@ -1,5 +1,7 @@
 // Spanish UI strings. Keys are the English source strings (see lib/i18n.js).
 export default {
+  "Training profile": "Perfil de entrenamiento",
+  "Strength workouts per week": "Entrenamientos de fuerza por semana",
   // --- Settings first screen in groups (#1105) ---
   "Watches": "Relojes",
   "Set once": "Una sola vez",

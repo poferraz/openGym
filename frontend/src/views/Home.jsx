@@ -112,11 +112,11 @@ export default function Home() {
   const managedQueue = !!liveQ && !!S.rotation && liveQ.rotationId === S.rotation.id
   // On a rest day, saying when you train next beats leaving the row as a full stop.
   const next = !S.active && !todayRoutines.length && !(rotating && !plannerQueue) ? nextTrainingDay(S, todayISO()) : null
-  // The streak card's fraction: this calendar week's workouts over the weekdays with a plan, or,
-  // in a coach week, the queue's sessions and your own days together (lib/queue.js weekTally).
-  const tally = weekTally(S, todayISO())
-  const { done: doneThisWeek, planned: plannedPerWeek } = tally
   const left = workoutsLeft(S, todayISO())
+  const strengthGoal = left?.kind === 'strength'
+  // The streak card uses the Personal strength goal when set and the schedule tally otherwise.
+  const tally = strengthGoal ? { done: left.done, planned: left.of } : weekTally(S, todayISO())
+  const { done: doneThisWeek, planned: plannedPerWeek } = tally
   // The streak with its best run and freezes (lib/streak.js), read back from the workouts.
   const todayKey = todayISO()
   const streak = useMemo(() => streakInfo(S, todayKey), [S.workouts, S.weekStart, S.streakRule, S.recoverySessions, S.recoveryStreak, S.activities, S.activityStreak, todayKey]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -162,7 +162,10 @@ export default function Home() {
       </>}
       {/* The week's plan as a countdown (#753, lib/week-left.js): "2 of 4 left this week". */}
       {left && <div className={'small dim wkleft' + (left.left > 0 ? '' : ' done')}>
-        {left.left > 0 ? tn('{0} of {1} left this week', '{0} of {1} left this week', left.left, left.of) : t('All done this week. Nice.')}
+        {strengthGoal ? <>
+          {t('{0} of {1} strength workouts this week', left.done, left.of)}
+          {left.left === 0 && <> · {t('Extra workouts are optional')}</>}
+        </> : left.left > 0 ? tn('{0} of {1} left this week', '{0} of {1} left this week', left.left, left.of) : t('All done this week. Nice.')}
       </div>}
       {/* Once today's session is logged the row stops asking for it. The week strip already
           knew (its dot goes 'done'); this row did not, so a finished day kept showing the

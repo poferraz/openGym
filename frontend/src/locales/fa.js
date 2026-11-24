@@ -1,5 +1,7 @@
 // Persian UI strings. Keys are the English source strings.
 export default {
+  "Training profile": "پروفایل تمرین",
+  "Strength workouts per week": "جلسات تمرین قدرتی در هفته",
   // --- Settings first screen in groups (#1105) ---
   "Watches": "ساعت‌ها",
   "Set once": "یک‌بار تنظیم",
