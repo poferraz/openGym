@@ -4,7 +4,7 @@
   "buildCommand": "npm run build:personal",
   "outputDirectory": "dist",
   "functions": {
-    "api/coach-plan.js": { "maxDuration": 60 }
+    "api/coach-plan.js": { "maxDuration": 180 }
   },
   "headers": [
     {

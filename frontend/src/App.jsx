@@ -88,7 +88,10 @@ function lazyView(load) {
   const Lazy = lazy(fetchIt)
   views.push(fetchIt)
   return function LazyView(props) {
-    return View ? <View {...props} /> : <Suspense fallback={null}><Lazy {...props} /></Suspense>
+    // A route that suspended on its first render keeps that boundary after the import loads.
+    // Switching to the direct component on a later render would remount the route and clear its form.
+    const [LoadedView] = useState(() => View)
+    return LoadedView ? <LoadedView {...props} /> : <Suspense fallback={null}><Lazy {...props} /></Suspense>
   }
 }
 const Admin = lazyView(() => import('./views/Admin.jsx'))

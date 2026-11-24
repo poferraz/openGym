@@ -71,6 +71,19 @@ describe('personal Coach Cloud relay', () => {
     expect(JSON.parse(upstreamBody.messages[1].content)).toEqual({ profile: body.profile, exercises: body.exercises })
   })
 
+  it('sends the optional focus and uses bounded reasoning for the default cloud model', async () => {
+    vercelHost()
+    const upstream = vi.fn(async () => Response.json({ message: { content: '{"routines":[]}' } }))
+    vi.stubGlobal('fetch', upstream)
+
+    const response = await handler.fetch(request({ ...body, model: 'kimi-k3.1-pro', brief: '  Add more pulling.  ' }))
+    expect(response.status).toBe(200)
+    const options = JSON.parse(upstream.mock.calls[0][1].body)
+    expect(options.think).toBe('medium')
+    expect(options.messages[0].content).toContain('low-impact')
+    expect(JSON.parse(options.messages[1].content)).toMatchObject({ brief: 'Add more pulling.' })
+  })
+
   it('rejects a foreign Origin even if a forwarded host matches it', async () => {
     vercelHost()
     const upstream = vi.fn()
@@ -107,6 +120,8 @@ describe('personal Coach Cloud relay', () => {
     { ...body, profile: { ...body.profile, recentPerformance: [{ id: '0014', reps: 10, unit: 'kg', date: 'do not send' }] } },
     { ...body, exercises: [{ ...body.exercises[0], photos: ['do not send'] }] },
     { ...body, profile: { ...body.profile, recovery: 'x'.repeat(1024) } },
+    { ...body, brief: 'x'.repeat(301) },
+    { ...body, brief: 'test-ollama-key' },
   ])('rejects unauthorized or oversized profile data', async (payload) => {
     vercelHost()
     const upstream = vi.fn()

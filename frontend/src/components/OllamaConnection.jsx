@@ -12,11 +12,12 @@ export function useOllamaKeyVault() {
     unlock: unlockOllamaKey, lock: lockOllamaKey, forget: forgetOllamaKey }
 }
 
-const fieldsStyle = { display: 'grid', gap: 12 }
-const labelStyle = { display: 'grid', gap: 5 }
-const actionsStyle = { display: 'flex', flexWrap: 'wrap', gap: 8 }
+const fieldsStyle = { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }
+const labelStyle = { ...fieldsStyle, gap: 5 }
+const actionsStyle = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }
+const inputStyle = { background: 'var(--surface-2)', minWidth: 0 }
 
-export default function OllamaConnection({ vault, model, onModelChange }) {
+export default function OllamaConnection({ vault, model, onModelChange, showModel = true }) {
   const [remember, setRemember] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -62,13 +63,13 @@ export default function OllamaConnection({ vault, model, onModelChange }) {
   const forget = () => perform(() => vault.forget())
   const lock = () => perform(() => vault.lock())
 
-  return <Section title="Ollama Cloud" footer="When you request a plan, this app’s Vercel relay forwards your key to Ollama.">
+  return <Section title="Ollama Cloud" footer={vault.key ? undefined : 'When you send a draft request, the Vercel relay forwards your key to Ollama.'}>
     <div style={{ ...fieldsStyle, padding: 12 }}>
-      <label style={labelStyle}>
+      {showModel && <label style={labelStyle}>
         <span>Model</span>
-        <TextField name="model" value={model ?? ''} onChange={event => onModelChange(event.target.value)}
+        <TextField name="model" value={model ?? ''} style={inputStyle} onChange={event => onModelChange(event.target.value)}
           spellCheck={false} autoCapitalize="none" autoCorrect="off" />
-      </label>
+      </label>}
 
       {vault.key ? <>
         <span className="small" role="status">{vault.remembered ? 'Saved key unlocked for this session.' : 'API key ready for this session.'}</span>
@@ -79,36 +80,35 @@ export default function OllamaConnection({ vault, model, onModelChange }) {
       </> : vault.remembered ? <form onSubmit={unlockKey} autoComplete="off" style={fieldsStyle} aria-busy={busy}>
         <label style={labelStyle}>
           <span>Passphrase for saved key</span>
-          <TextField name="passphrase" type="password" autoComplete="off" required />
+          <TextField name="passphrase" type="password" autoComplete="off" style={inputStyle} required />
         </label>
         <div style={actionsStyle}>
-          <Button type="submit" size="sm" variant="tinted" disabled={busy}>Unlock key</Button>
+          <Button type="submit" variant="primary" disabled={busy}>Unlock key</Button>
           <Button type="button" size="sm" disabled={busy} onClick={forget}>Forget saved key</Button>
         </div>
       </form> : <form onSubmit={saveKey} autoComplete="off" style={fieldsStyle} aria-busy={busy}>
         <label style={labelStyle}>
           <span>Ollama API key</span>
-          <TextField name="apiKey" type="password" autoComplete="off" spellCheck={false} required />
+          <TextField name="apiKey" type="password" autoComplete="off" spellCheck={false} style={inputStyle} required />
         </label>
-        <label className="row small" style={{ gap: 8 }}>
+        <label className="row small" style={{ gap: 8, minHeight: 44 }}>
           <input type="checkbox" checked={remember} disabled={!canRememberOllamaKey() || busy} onChange={event => setRemember(event.target.checked)} />
           Remember on this device
         </label>
         {remember ? <>
           <label style={labelStyle}>
             <span>Passphrase</span>
-            <TextField name="passphrase" type="password" autoComplete="off" required minLength={MIN_OLLAMA_PASSPHRASE_LENGTH} />
+            <TextField name="passphrase" type="password" autoComplete="off" style={inputStyle} required minLength={MIN_OLLAMA_PASSPHRASE_LENGTH} />
           </label>
           <label style={labelStyle}>
             <span>Confirm passphrase</span>
-            <TextField name="confirmPassphrase" type="password" autoComplete="off" required minLength={MIN_OLLAMA_PASSPHRASE_LENGTH} />
+            <TextField name="confirmPassphrase" type="password" autoComplete="off" style={inputStyle} required minLength={MIN_OLLAMA_PASSPHRASE_LENGTH} />
           </label>
           <span className="muted small">Use at least {MIN_OLLAMA_PASSPHRASE_LENGTH} characters. This passphrase unlocks the encrypted key each time you reopen the app.</span>
         </> : <span className="muted small">By default, the key clears when you reload or close this tab.</span>}
-        <div style={actionsStyle}>
-          <Button type="submit" size="sm" variant="tinted" disabled={busy}>{remember ? 'Save encrypted key' : 'Use key for this session'}</Button>
-          <a className="small" href="https://ollama.com/settings/keys" target="_blank" rel="noopener noreferrer">Get an Ollama API key</a>
-        </div>
+        <Button type="submit" variant="primary" disabled={busy}>{remember ? 'Save encrypted key' : 'Use key for this session'}</Button>
+        <a className="small" href="https://ollama.com/settings/keys" target="_blank" rel="noopener noreferrer"
+          style={{ display: 'flex', alignItems: 'center', minHeight: 44 }}>Get an Ollama API key</a>
       </form>}
 
       {error && <span role="alert" className="small" style={{ color: 'var(--red)' }}>{error}</span>}
